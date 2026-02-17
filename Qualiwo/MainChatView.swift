@@ -98,66 +98,98 @@ struct MainChatView: View {
                     
                     Spacer()
                     
-                    HStack(spacing: 12) {
-                        Button(action: { 
-                            // Scroll to cart in chat or show it
-                            if !cartItems.isEmpty {
-                                updateCartInChat()
-                            }
-                        }) {
-                            ZStack(alignment: .topTrailing) {
-                                Image(systemName: "bag.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(8)
-                                    .background(Circle().fill(Color.black.opacity(0.3)))
-                                
-                                if !cartItems.isEmpty {
-                                    Text("\(cartItems.count)")
-                                        .font(.caption2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                        .frame(width: 20, height: 20)
-                                        .background(Color.red)
-                                        .clipShape(Circle())
-                                        .offset(x: 8, y: -8)
-                                }
-                            }
-                        }
-                        
-                        Circle()
-                            .fill(Color.qGradientPrimary)
-                            .frame(width: 40, height: 40)
-                            .overlay(
-                                Text("U")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                            .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    }
+                    Circle()
+                        .fill(Color.qOrange)
+                        .frame(width: 40, height: 40)
+                        .overlay(
+                            Text("U")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
                 // Content area
                 if messages.isEmpty {
-                    // Welcome state
-                    Spacer()
-                    
-                    VStack(spacing: 16) {
-                        Image("logo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 70, height: 70)
-                            .foregroundColor(.qOrange)
-                        
-                        Text("Comment puis-je vous aider?")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
+                    // Welcome state (Android style)
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            Spacer().frame(height: 30)
+                            
+                            // Logo
+                            Image("logo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 90, height: 90)
+                            
+                            // Title
+                            Text("Bienvenue sur Qualiwo")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            // Categories card
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Header
+                                HStack(spacing: 10) {
+                                    Image(systemName: "globe.americas.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.qOrange)
+                                    
+                                    Text("CE QUE VOUS POUVEZ ACHETER")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.qOrange)
+                                        .tracking(1)
+                                }
+                                .padding(.bottom, 4)
+                                
+                                // Category rows (clickable)
+                                Button(action: { sendCategoryMessage("Alimentation générale") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "basket.fill",
+                                        title: "Alimentation générale",
+                                        subtitle: "Chocolats · Mayonnaise · Riz"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Button(action: { sendCategoryMessage("Boissons") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "cup.and.saucer.fill",
+                                        title: "Boissons",
+                                        subtitle: "Jus de fruits · Sodas · Vins"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Button(action: { sendCategoryMessage("Maison & Cuisine") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "house.fill",
+                                        title: "Maison & Cuisine",
+                                        subtitle: "Ustensiles · Arts de la table · Décoration"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Button(action: { sendCategoryMessage("Hygiène & Beauté") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "sparkles",
+                                        title: "Hygiène & Beauté",
+                                        subtitle: "Parfums · Maquillage · Soins"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .padding(20)
+                            .background(Color.qCardBg)
+                            .cornerRadius(16)
+                            .padding(.horizontal, 16)
+                            
+                            Spacer()
+                        }
                     }
-                    
-                    Spacer()
                 } else {
                     // Messages list
                     ScrollViewReader { proxy in
@@ -199,6 +231,17 @@ struct MainChatView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
+                            
+                            // Loading indicator inside chat (Android style)
+                            if isLoading {
+                                HStack {
+                                    LoadingIndicatorView()
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .id("loadingIndicator")
+                            }
                         }
                         .onChange(of: messages.count) { _ in
                             if let last = messages.last {
@@ -209,6 +252,8 @@ struct MainChatView: View {
                         }
                     }
                 }
+                
+
                 
                 // Input bar
                 HStack(spacing: 12) {
@@ -269,7 +314,7 @@ struct MainChatView: View {
                             withAnimation { showSidebar = false }
                         }
                     )
-                    .frame(width: UIScreen.main.bounds.width * 0.82)
+                    .frame(width: UIScreen.main.bounds.width * 0.90)
                     
                     Spacer()
                 }
@@ -291,6 +336,11 @@ struct MainChatView: View {
                 }
             }
         }
+    }
+    
+    private func sendCategoryMessage(_ category: String) {
+        messageInput = category
+        sendMessage()
     }
     
     private func sendMessage() {

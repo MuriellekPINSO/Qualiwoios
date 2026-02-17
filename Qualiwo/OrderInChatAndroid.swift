@@ -217,13 +217,13 @@ struct OrderInChatAndroidView: View {
                                 .background(Color.red.opacity(0.6))
                                 .cornerRadius(12)
                         } else {
-                            Text("Annuler")
+                            Text(currentStatus == "cancelled" ? "Commande annulée" : "Annuler")
                                 .font(.subheadline)
                                 .fontWeight(.bold)
-                                .foregroundColor(canCancel ? Color(red: 0.95, green: 0.85, blue: 0.2) : .gray)
+                                .foregroundColor(currentStatus == "cancelled" ? .red : (canCancel ? .white : .gray))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(canCancel ? Color(red: 0.35, green: 0.12, blue: 0.12) : Color.gray.opacity(0.3))
+                                .background(currentStatus == "cancelled" ? Color.red.opacity(0.15) : (canCancel ? Color(red: 0.35, green: 0.12, blue: 0.12) : Color.gray.opacity(0.3)))
                                 .cornerRadius(12)
                         }
                     }

@@ -13,49 +13,12 @@ struct SidebarView: View {
     var onSelectConversation: (ChatConversation) -> Void
     var onNewChat: () -> Void
     
-    @State private var searchText = ""
-    @State private var chatsExpanded = true
-    
-    // Sample conversations
-    let conversations: [ChatConversation] = [
-        ChatConversation(
-            title: "T-shirts disponibles en ligne",
-            lastMessage: "Oui, nous avons plusieurs T-shirts en stock...",
-            time: "09:02",
-            messages: [
-                ChatMessage(content: "je cherche des t-shirts", isFromUser: true, timestamp: Date()),
-                ChatMessage(content: "Oui, nous avons plusieurs T-shirts en stock...", isFromUser: false, timestamp: Date())
-            ]
-        ),
-        ChatConversation(
-            title: "Correction quotidienne",
-            lastMessage: "Voici le résumé des corrections...",
-            time: "10:02",
-            messages: [
-                ChatMessage(content: "Voici le résumé des corrections...", isFromUser: false, timestamp: Date())
-            ]
-        ),
-        ChatConversation(
-            title: "Animation Hero Section",
-            lastMessage: "La section hero est maintenant animée...",
-            time: "10:02",
-            messages: [
-                ChatMessage(content: "La section hero est maintenant animée...", isFromUser: false, timestamp: Date())
-            ]
-        ),
-        ChatConversation(
-            title: "Plateforme Aura.build",
-            lastMessage: "Design de la plateforme finalisé",
-            time: "10:02",
-            messages: [
-                ChatMessage(content: "Design de la plateforme finalisé", isFromUser: false, timestamp: Date())
-            ]
-        ),
-    ]
+    // Sample conversations (empty for now like Android)
+    let conversations: [ChatConversation] = []
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
+        VStack(alignment: .leading, spacing: 0) {
+            // MARK: - Header: "Qualiwo" + X close
             HStack {
                 Text("Qualiwo")
                     .font(.title2)
@@ -68,111 +31,82 @@ struct SidebarView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white)
+                        .padding(8)
                 }
-                
-                Circle()
-                    .fill(Color.qOrange)
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Text("U")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white)
-                    )
-                    .padding(.leading, 8)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 12)
             
-            // New chat button
+            // MARK: - "+ Nouveau chat" button (orange, full width)
             Button(action: onNewChat) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                     
                     Text("Nouveau chat")
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .fontWeight(.bold)
                         .foregroundColor(.white)
                     
                     Spacer()
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.vertical, 14)
+                .background(Color.qOrange)
+                .cornerRadius(10)
+                .padding(.horizontal, 16)
             }
             
-            // Search bar
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
-                
-                TextField("", text: $searchText)
+            // MARK: - Divider
+            Divider()
+                .background(Color.gray.opacity(0.2))
+                .padding(.vertical, 16)
+                .padding(.horizontal, 16)
+            
+            // MARK: - "Historique" Section
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Historique")
+                    .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(.white)
-                    .font(.subheadline)
-                    .placeholder(when: searchText.isEmpty) {
-                        Text("Rechercher des chats")
-                            .foregroundColor(.gray.opacity(0.6))
-                            .font(.subheadline)
-                    }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.qInputBg)
-            .cornerRadius(8)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            
-            // Chats section
-            VStack(alignment: .leading, spacing: 0) {
-                Button(action: { withAnimation { chatsExpanded.toggle() } }) {
-                    HStack {
-                        Text("Vos chats")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.gray)
-                        
-                        Spacer()
-                        
-                        Image(systemName: "eye.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
-                    }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                }
                 
-                if chatsExpanded {
+                if conversations.isEmpty {
+                    Text("Aucune conversation")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                } else {
                     ScrollView {
                         VStack(spacing: 4) {
                             ForEach(conversations) { conv in
                                 Button(action: { onSelectConversation(conv) }) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 3) {
-                                                Text(conv.title)
-                                                    .font(.subheadline)
-                                                    .fontWeight(.semibold)
-                                                    .foregroundColor(.white)
-                                                    .lineLimit(1)
-                                                
-                                                Text(conv.lastMessage)
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                                    .lineLimit(1)
-                                            }
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(conv.title)
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                                .lineLimit(1)
                                             
-                                            Spacer()
-                                            
-                                            Text(conv.time)
-                                                .font(.caption2)
+                                            Text(conv.lastMessage)
+                                                .font(.caption)
                                                 .foregroundColor(.gray)
+                                                .lineLimit(1)
                                         }
+                                        
+                                        Spacer()
+                                        
+                                        Text(conv.time)
+                                            .font(.caption2)
+                                            .foregroundColor(.gray)
                                     }
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 12)
-                                    .background(Color.qInputBg)
+                                    .background(Color.qSurface)
                                     .cornerRadius(8)
                                     .padding(.horizontal, 16)
                                 }
@@ -184,22 +118,23 @@ struct SidebarView: View {
             
             Spacer()
             
-            // User info bottom
+            // MARK: - User info bottom
             VStack(spacing: 10) {
                 HStack(spacing: 12) {
+                    // User avatar (orange circle like Android)
                     Circle()
-                        .fill(Color.green.opacity(0.7))
-                        .frame(width: 36, height: 36)
+                        .fill(Color.qOrange)
+                        .frame(width: 38, height: 38)
                         .overlay(
                             Text("U")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 15, weight: .bold))
                                 .foregroundColor(.white)
                         )
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Utilisateur")
                             .font(.subheadline)
-                            .fontWeight(.medium)
+                            .fontWeight(.semibold)
                             .foregroundColor(.white)
                         
                         Text("Gratuit")
@@ -209,19 +144,21 @@ struct SidebarView: View {
                     
                     Spacer()
                     
+                    // Three dots menu (Android style)
                     Button(action: {}) {
-                        Image(systemName: "star.fill")
+                        Image(systemName: "ellipsis")
                             .font(.system(size: 16))
                             .foregroundColor(.gray)
+                            .rotationEffect(.degrees(90))
                     }
                 }
                 .padding(.horizontal, 16)
                 
-                // Logout button
+                // MARK: - Logout button
                 Button(action: { isLoggedIn = false }) {
                     HStack(spacing: 10) {
-                        Image(systemName: "arrowleft.circle.fill")
-                            .font(.system(size: 18))
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 16))
                             .foregroundColor(.qOrange)
                         
                         Text("Déconnexion")
@@ -233,14 +170,14 @@ struct SidebarView: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
-                    .background(Color.qInputBg)
+                    .background(Color.qSurface)
                     .cornerRadius(8)
                     .padding(.horizontal, 16)
                 }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 40)
         }
-        .background(Color.qDarkBg)
+        .background(Color.qDarkBg.ignoresSafeArea())
     }
 }
 
