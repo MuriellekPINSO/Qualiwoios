@@ -130,19 +130,11 @@ struct OrderTrackingView: View {
                                             .foregroundColor(.white)
                                         
                                         HStack(spacing: 8) {
-                                            Text("N° \(order.order_number)")
+                                            Text("N° \(order.order_number) • Aujourd'hui")
                                                 .font(.caption)
                                                 .fontWeight(.medium)
                                                 .foregroundColor(.gray)
-                                            
-                                            Circle()
-                                                .fill(Color.gray)
-                                                .frame(width: 4, height: 4)
-                                                
-                                            Text("AUJOURD'HUI")
-                                                .font(.caption)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(.qOrange)
+                                                .lineLimit(1)
                                         }
                                     }
                                     
@@ -179,7 +171,7 @@ struct OrderTrackingView: View {
                                 VStack(spacing: 0) {
                                     StatusStep(
                                         title: "En attente d'acceptation",
-                                        subtitle: statusIndex >= 1 ? "Commande acceptée" : "Votre commande a été reçue",
+                                        subtitle: statusIndex >= 1 ? "Votre commande est acceptée" : "Votre commande a été reçue",
                                         isCompleted: statusIndex >= 1,
                                         isActive: statusIndex == 0,
                                         icon: "clock.fill",
@@ -188,7 +180,7 @@ struct OrderTrackingView: View {
                                     
                                     StatusStep(
                                         title: "Prêt à être récupéré",
-                                        subtitle: "En préparation",
+                                        subtitle: "Passer récupérer votre sac",
                                         isCompleted: statusIndex >= 2,
                                         isActive: statusIndex == 1,
                                         icon: "shippingbox.fill",
@@ -196,7 +188,7 @@ struct OrderTrackingView: View {
                                     )
                                     
                                     StatusStep(
-                                        title: "Commande complétée",
+                                        title: "Commande terminée",
                                         subtitle: "Dernière étape",
                                         isCompleted: statusIndex >= 3,
                                         isActive: statusIndex == 2,

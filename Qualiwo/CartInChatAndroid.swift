@@ -126,18 +126,11 @@ struct CartInChatAndroidView: View {
                             // Product info
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(item.product.name)
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
-                                            .lineLimit(1)
-                                        
-                                        Text("QUALIWO")
-                                            .font(.caption2)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.qOrange)
-                                    }
+                                    Text(item.product.name)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
                                     
                                     Spacer()
                                     

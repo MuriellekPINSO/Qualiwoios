@@ -10,10 +10,15 @@ import SwiftUI
 // MARK: - Product Card (Android Style)
 struct ProductCardAndroid: View {
     let product: ProductResult
+    let cartItems: [CartItem]
     let onAddToCart: () -> Void
+    let onRemoveFromCart: () -> Void
     let onTap: () -> Void
-    @State private var addedToCart = false
-    @State private var quantity: Int = 0
+    
+    /// Get the current quantity of this product in the cart
+    private var cartQuantity: Int {
+        cartItems.first(where: { $0.product.id == product.id })?.quantity ?? 0
+    }
     
     var body: some View {
         Button(action: onTap) {
@@ -84,16 +89,11 @@ struct ProductCardAndroid: View {
                     Spacer().frame(height: 4)
                     
                     // Add to cart button or quantity control
-                    if addedToCart && quantity > 0 {
-                        // Quantity controls (like Android)
+                    if cartQuantity > 0 {
+                        // Quantity controls (like Android) - synced with cart
                         HStack(spacing: 0) {
                             Button(action: {
-                                if quantity > 0 {
-                                    quantity -= 1
-                                    if quantity == 0 {
-                                        addedToCart = false
-                                    }
-                                }
+                                onRemoveFromCart()
                             }) {
                                 Image(systemName: "minus")
                                     .font(.system(size: 14, weight: .bold))
@@ -103,7 +103,7 @@ struct ProductCardAndroid: View {
                                     .cornerRadius(8, corners: [.topLeft, .bottomLeft])
                             }
                             
-                            Text("\(quantity)")
+                            Text("\(cartQuantity)")
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
@@ -112,7 +112,6 @@ struct ProductCardAndroid: View {
                                 .background(Color.qSurface)
                             
                             Button(action: {
-                                quantity += 1
                                 onAddToCart()
                             }) {
                                 Image(systemName: "plus")
@@ -126,8 +125,6 @@ struct ProductCardAndroid: View {
                     } else {
                         // Add to cart button (like Android)
                         Button(action: {
-                            quantity = 1
-                            addedToCart = true
                             onAddToCart()
                         }) {
                             HStack(spacing: 6) {

@@ -10,6 +10,8 @@ import SwiftUI
 // MARK: - Order In Chat View (Android Style)
 struct OrderInChatAndroidView: View {
     let order: Order
+    var isPaid: Bool
+    var onPayOrder: ((Order) -> Void)?
     @State private var showCancelAlert = false
     @State private var isDismissed = false
     @State private var currentStatus: String
@@ -18,8 +20,10 @@ struct OrderInChatAndroidView: View {
     @State private var showError = false
     @State private var isCollapsed = false
     
-    init(order: Order) {
+    init(order: Order, isPaid: Bool = false, onPayOrder: ((Order) -> Void)? = nil) {
         self.order = order
+        self.isPaid = isPaid
+        self.onPayOrder = onPayOrder
         self._currentStatus = State(initialValue: order.status)
     }
     
@@ -54,188 +58,184 @@ struct OrderInChatAndroidView: View {
         return currentStatus != "completed" && currentStatus != "cancelled"
     }
     
+    // Format number with space separator (e.g. 2 500)
+    func formatPrice(_ price: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = " "
+        return formatter.string(from: NSNumber(value: price)) ?? "\(price)"
+    }
+    
     var body: some View {
         if !isDismissed {
             VStack(alignment: .leading, spacing: 0) {
-                // Header: "Suivi de Commande" + Status badge (Android style)
-                Button(action: { withAnimation(.easeInOut(duration: 0.3)) { isCollapsed.toggle() } }) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Suivi de Commande")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            
-                            HStack(spacing: 6) {
-                                Text("N° \(order.order_number)")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                
-                                Text("•")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                
-                                Text("AUJOURD'HUI")
-                                    .font(.caption)
+                    // MARK: - Header: "Suivi de Commande" + Status badge
+                    Button(action: { withAnimation(.easeInOut(duration: 0.3)) { isCollapsed.toggle() } }) {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Suivi de Commande")
+                                    .font(.headline)
                                     .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                
+                                Text("N° \(order.order_number) • Aujourd'hui")
+                                    .font(.caption)
                                     .foregroundColor(.gray)
+                                    .lineLimit(1)
                             }
-                        }
-                        
-                        Spacer()
-                        
-                        // Status badge (Android style)
-                        Text(statusText)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(statusColor)
-                            .cornerRadius(6)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding(16)
-                
-                if !isCollapsed {
-                    Divider()
-                        .background(Color.gray.opacity(0.2))
-                    
-                    if currentStatus == "cancelled" {
-                        // Cancelled state - show all steps with cancelled style
-                        VStack(spacing: 0) {
-                            AndroidOrderStep(
-                                icon: "clock.fill",
-                                title: "En attente d'acceptation",
-                                subtitle: "Commande acceptée",
-                                isCompleted: true,
-                                isActive: false,
-                                isCancelled: true,
-                                showLine: true
-                            )
                             
-                            AndroidOrderStep(
-                                icon: "shippingbox.fill",
-                                title: "Prêt à être récupéré",
-                                subtitle: "En préparation",
-                                isCompleted: false,
-                                isActive: false,
-                                isCancelled: true,
-                                showLine: true
-                            )
+                            Spacer()
                             
-                            AndroidOrderStep(
-                                icon: "checkmark.seal.fill",
-                                title: "Commande complétée",
-                                subtitle: "Dernière étape",
-                                isCompleted: false,
-                                isActive: false,
-                                isCancelled: true,
-                                showLine: false
-                            )
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                    } else {
-                        // Active order steps (Android style timeline)
-                        VStack(spacing: 0) {
-                            AndroidOrderStep(
-                                icon: "clock.fill",
-                                title: "En attente d'acceptation",
-                                subtitle: statusIndex >= 1 ? "Commande acceptée" : "Votre commande a été reçue",
-                                isCompleted: statusIndex >= 1,
-                                isActive: currentStatus == "pending",
-                                isCancelled: false,
-                                showLine: true
-                            )
-                            
-                            AndroidOrderStep(
-                                icon: "shippingbox.fill",
-                                title: "Prêt à être récupéré",
-                                subtitle: "En préparation",
-                                isCompleted: statusIndex >= 2,
-                                isActive: currentStatus == "preparing",
-                                isCancelled: false,
-                                showLine: true
-                            )
-                            
-                            AndroidOrderStep(
-                                icon: "checkmark.seal.fill",
-                                title: "Commande complétée",
-                                subtitle: "Dernière étape",
-                                isCompleted: statusIndex >= 3,
-                                isActive: currentStatus == "ready",
-                                isCancelled: false,
-                                showLine: false
-                            )
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                    }
-                    
-                    Divider()
-                        .background(Color.gray.opacity(0.2))
-                    
-                    // Total + Article count (Android style)
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Total: \(Int(order.total)) CFA")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                        
-                        Spacer()
-                        
-                        if let items = order.items {
-                            Text("\(items.count) ART.")
-                                .font(.caption)
+                            // Status badge
+                            Text(statusText)
+                                .font(.caption2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
-                                .background(Color.qOrange)
+                                .background(statusColor)
                                 .cornerRadius(6)
                         }
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(16)
                     
-                    // Cancel button (Android style - full width red)
-                    Button(action: {
-                        if canCancel {
-                            showCancelAlert = true
+                    if !isCollapsed {
+                        Divider()
+                            .background(Color.gray.opacity(0.2))
+                        
+                        // MARK: - Order Steps Timeline
+                        VStack(spacing: 0) {
+                            if currentStatus == "cancelled" {
+                                // Cancelled state
+                                AndroidOrderStep(
+                                    icon: "clock.fill",
+                                    title: "En attente d'acceptation",
+                                    subtitle: "Commande acceptée",
+                                    isCompleted: true,
+                                    isActive: false,
+                                    isCancelled: true,
+                                    showLine: true,
+                                    showPayButton: false,
+                                    onPayTapped: nil
+                                )
+                                
+                                AndroidOrderStep(
+                                    icon: "shippingbox.fill",
+                                    title: "Prêt à être récupéré",
+                                    subtitle: "Passer récupérer votre sac",
+                                    isCompleted: false,
+                                    isActive: false,
+                                    isCancelled: true,
+                                    showLine: true,
+                                    showPayButton: false,
+                                    onPayTapped: nil
+                                )
+                                
+                                AndroidOrderStep(
+                                    icon: "checkmark.seal.fill",
+                                    title: "Commande terminée",
+                                    subtitle: "Dernière étape",
+                                    isCompleted: false,
+                                    isActive: false,
+                                    isCancelled: true,
+                                    showLine: false,
+                                    showPayButton: false,
+                                    onPayTapped: nil
+                                )
+                            } else {
+                                // Active order steps
+                                AndroidOrderStep(
+                                    icon: "clock.fill",
+                                    title: "En attente d'acceptation",
+                                    subtitle: statusIndex >= 1 ? "Votre commande est acceptée" : "Votre commande a été reçue",
+                                    isCompleted: statusIndex >= 1,
+                                    isActive: currentStatus == "pending",
+                                    isCancelled: false,
+                                    showLine: true,
+                                    showPayButton: false,
+                                    onPayTapped: nil
+                                )
+                                
+                                AndroidOrderStep(
+                                    icon: "shippingbox.fill",
+                                    title: "Prêt à être récupéré",
+                                    subtitle: "Passer récupérer votre sac",
+                                    isCompleted: statusIndex >= 2,
+                                    isActive: currentStatus == "preparing",
+                                    isCancelled: false,
+                                    showLine: true,
+                                    showPayButton: !isPaid && (currentStatus == "ready" || statusIndex >= 2),
+                                    onPayTapped: {
+                                        onPayOrder?(order)
+                                    }
+                                )
+                                
+                                AndroidOrderStep(
+                                    icon: "checkmark.seal.fill",
+                                    title: "Commande terminée",
+                                    subtitle: "Dernière étape",
+                                    isCompleted: statusIndex >= 3,
+                                    isActive: currentStatus == "ready",
+                                    isCancelled: false,
+                                    showLine: false,
+                                    showPayButton: false,
+                                    onPayTapped: nil
+                                )
+                            }
                         }
-                    }) {
-                        if isCancelling {
-                            ProgressView()
-                                .tint(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(Color.red.opacity(0.6))
-                                .cornerRadius(12)
-                        } else {
-                            Text(currentStatus == "cancelled" ? "Commande annulée" : "Annuler")
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        
+                        Divider()
+                            .background(Color.gray.opacity(0.2))
+                        
+                        // MARK: - Total
+                        HStack {
+                            Text("Total: \(formatPrice(Int(order.total))) CFA")
                                 .font(.subheadline)
                                 .fontWeight(.bold)
-                                .foregroundColor(currentStatus == "cancelled" ? .red : (canCancel ? .white : .gray))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(currentStatus == "cancelled" ? Color.red.opacity(0.15) : (canCancel ? Color(red: 0.35, green: 0.12, blue: 0.12) : Color.gray.opacity(0.3)))
-                                .cornerRadius(12)
+                                .foregroundColor(.white)
+                            
+                            Spacer()
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        
+                        // MARK: - Cancel button
+                        Button(action: {
+                            if canCancel {
+                                showCancelAlert = true
+                            }
+                        }) {
+                            if isCancelling {
+                                ProgressView()
+                                    .tint(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color.red.opacity(0.6))
+                                    .cornerRadius(12)
+                            } else {
+                                Text(currentStatus == "cancelled" ? "Commande annulée" : "Annuler")
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(currentStatus == "cancelled" ? .red : (canCancel ? .white : .gray))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(currentStatus == "cancelled" ? Color.red.opacity(0.15) : (canCancel ? Color(red: 0.35, green: 0.12, blue: 0.12) : Color.gray.opacity(0.3)))
+                                    .cornerRadius(12)
+                            }
+                        }
+                        .disabled(!canCancel || isCancelling)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
                     }
-                    .disabled(!canCancel || isCancelling)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
                 }
-            }
-            .background(Color.qCardBg)
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
-            .opacity(currentStatus == "cancelled" ? 0.8 : 1.0)
+                .background(Color.qCardBg)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+                .opacity(currentStatus == "cancelled" ? 0.8 : 1.0)
             .alert("Annuler la commande", isPresented: $showCancelAlert) {
                 Button("Non", role: .cancel) { }
                 Button("Oui, annuler", role: .destructive) {
@@ -326,6 +326,8 @@ struct AndroidOrderStep: View {
     let isActive: Bool
     let isCancelled: Bool
     let showLine: Bool
+    let showPayButton: Bool
+    let onPayTapped: (() -> Void)?
     
     var circleColor: Color {
         if isCancelled && !isCompleted { return Color.gray.opacity(0.3) }
@@ -367,11 +369,11 @@ struct AndroidOrderStep: View {
                 if showLine {
                     Rectangle()
                         .fill(isCompleted ? Color.green.opacity(0.5) : Color.gray.opacity(0.15))
-                        .frame(width: 2, height: 28)
+                        .frame(width: 2, height: showPayButton ? 50 : 28)
                 }
             }
             
-            // Text
+            // Text + Pay button
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.subheadline)
@@ -381,6 +383,28 @@ struct AndroidOrderStep: View {
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(isCompleted ? .green : isActive ? .qOrange : .gray)
+                
+                // Pay button (shown when status is "ready")
+                if showPayButton && !isCancelled {
+                    Button(action: {
+                        onPayTapped?()
+                    }) {
+                        HStack(spacing: 8) {
+                            Text("Payer ma commande")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                            
+                            Image(systemName: "hand.wave.fill")
+                                .font(.system(size: 14))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color.qOrange)
+                        .cornerRadius(20)
+                    }
+                    .padding(.top, 6)
+                }
             }
             .padding(.top, 8)
             .padding(.bottom, showLine ? 12 : 0)

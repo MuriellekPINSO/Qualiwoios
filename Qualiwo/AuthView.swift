@@ -103,6 +103,39 @@ struct LoginCard: View {
     @State private var phone = ""
     @State private var password = ""
     @State private var showPassword = false
+    @State private var phoneError = ""
+    @State private var passwordError = ""
+    @State private var hasAttemptedSubmit = false
+    
+    /// Extracts only digits from the phone string
+    private var phoneDigits: String {
+        phone.filter { $0.isNumber }
+    }
+    
+    /// True when both fields pass validation
+    private var isFormValid: Bool {
+        phoneDigits.count == 10 && password.count >= 6
+    }
+    
+    private func validateFields() {
+        // Phone validation
+        if phone.isEmpty {
+            phoneError = "Le numéro de téléphone est requis"
+        } else if phoneDigits.count != 10 {
+            phoneError = "Le numéro doit contenir exactement 10 chiffres (ex: 01 45674578)"
+        } else {
+            phoneError = ""
+        }
+        
+        // Password validation
+        if password.isEmpty {
+            passwordError = "Le mot de passe est requis"
+        } else if password.count < 6 {
+            passwordError = "Le mot de passe doit contenir au moins 6 caractères"
+        } else {
+            passwordError = ""
+        }
+    }
     
     var body: some View {
         VStack(spacing: 18) {
@@ -114,65 +147,111 @@ struct LoginCard: View {
                 .padding(.bottom, 6)
             
             // Phone field
-            HStack(spacing: 12) {
-                Image(systemName: "phone.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.qOrange)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    Image(systemName: "phone.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.qOrange)
+                    
+                    TextField("", text: $phone)
+                        .foregroundColor(.black)
+                        .keyboardType(.phonePad)
+                        .placeholder(when: phone.isEmpty) {
+                            Text("Ex: 01 45674578")
+                                .foregroundColor(.gray.opacity(0.6))
+                        }
+                        .onChange(of: phone) { _ in
+                            if hasAttemptedSubmit { validateFields() }
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(!phoneError.isEmpty ? Color.red.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                )
+                .cornerRadius(12)
                 
-                TextField("", text: $phone)
-                    .foregroundColor(.black)
-                    .placeholder(when: phone.isEmpty) {
-                        Text("Ex: +229 97123456")
-                            .foregroundColor(.gray.opacity(0.6))
+                if !phoneError.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 11))
+                        Text(phoneError)
+                            .font(.caption)
                     }
+                    .foregroundColor(.red)
+                    .padding(.leading, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-            .cornerRadius(12)
             
             // Password field
-            HStack(spacing: 12) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.qOrange)
-                
-                if showPassword {
-                    TextField("", text: $password)
-                        .foregroundColor(.black)
-                        .placeholder(when: password.isEmpty) {
-                            Text("Ex: SecurePass123!")
-                                .foregroundColor(.gray.opacity(0.6))
-                        }
-                } else {
-                    SecureField("", text: $password)
-                        .foregroundColor(.black)
-                        .placeholder(when: password.isEmpty) {
-                            Text("Ex: SecurePass123!")
-                                .foregroundColor(.gray.opacity(0.6))
-                        }
-                }
-                
-                Button(action: { showPassword.toggle() }) {
-                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(.gray.opacity(0.5))
+                        .foregroundColor(.qOrange)
+                    
+                    if showPassword {
+                        TextField("", text: $password)
+                            .foregroundColor(.black)
+                            .placeholder(when: password.isEmpty) {
+                                Text("SecurePass123")
+                                    .foregroundColor(.gray.opacity(0.6))
+                            }
+                    } else {
+                        SecureField("", text: $password)
+                            .foregroundColor(.black)
+                            .placeholder(when: password.isEmpty) {
+                                Text("SecurePass123")
+                                    .foregroundColor(.gray.opacity(0.6))
+                            }
+                    }
+                    
+                    Button(action: { showPassword.toggle() }) {
+                        Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(!passwordError.isEmpty ? Color.red.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                )
+                .cornerRadius(12)
+                
+                if !passwordError.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 11))
+                        Text(passwordError)
+                            .font(.caption)
+                    }
+                    .foregroundColor(.red)
+                    .padding(.leading, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-            .cornerRadius(12)
             
             // Se connecter button
-            Button(action: { isLoggedIn = true }) {
+            Button(action: {
+                hasAttemptedSubmit = true
+                validateFields()
+                if isFormValid {
+                    isLoggedIn = true
+                }
+            }) {
                 Text("Se connecter")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.qOrange)
+                    .background(hasAttemptedSubmit && !isFormValid ? Color.qOrange.opacity(0.4) : Color.qOrange)
                     .cornerRadius(12)
             }
             .padding(.top, 4)
@@ -195,6 +274,8 @@ struct LoginCard: View {
         .padding(.horizontal, 24)
         .background(Color.white)
         .cornerRadius(24, corners: [.topLeft, .topRight])
+        .animation(.easeInOut(duration: 0.2), value: phoneError)
+        .animation(.easeInOut(duration: 0.2), value: passwordError)
     }
 }
 
@@ -206,6 +287,39 @@ struct RegisterCard: View {
     @State private var phone = ""
     @State private var password = ""
     @State private var showPassword = false
+    @State private var phoneError = ""
+    @State private var passwordError = ""
+    @State private var hasAttemptedSubmit = false
+    
+    /// Extracts only digits from the phone string
+    private var phoneDigits: String {
+        phone.filter { $0.isNumber }
+    }
+    
+    /// True when all fields pass validation
+    private var isFormValid: Bool {
+        !name.isEmpty && phoneDigits.count == 10 && password.count >= 6
+    }
+    
+    private func validateFields() {
+        // Phone validation
+        if phone.isEmpty {
+            phoneError = "Le numéro de téléphone est requis"
+        } else if phoneDigits.count != 10 {
+            phoneError = "Le numéro doit contenir exactement 10 chiffres (ex: 01 45674578)"
+        } else {
+            phoneError = ""
+        }
+        
+        // Password validation
+        if password.isEmpty {
+            passwordError = "Le mot de passe est requis"
+        } else if password.count < 6 {
+            passwordError = "Le mot de passe doit contenir au moins 6 caractères"
+        } else {
+            passwordError = ""
+        }
+    }
     
     var body: some View {
         VStack(spacing: 18) {
@@ -235,65 +349,111 @@ struct RegisterCard: View {
             .cornerRadius(12)
             
             // Phone field
-            HStack(spacing: 12) {
-                Image(systemName: "phone.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.qOrange)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    Image(systemName: "phone.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.qOrange)
+                    
+                    TextField("", text: $phone)
+                        .foregroundColor(.black)
+                        .keyboardType(.phonePad)
+                        .placeholder(when: phone.isEmpty) {
+                            Text("Ex: 01 45674578")
+                                .foregroundColor(.gray.opacity(0.6))
+                        }
+                        .onChange(of: phone) { _ in
+                            if hasAttemptedSubmit { validateFields() }
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(!phoneError.isEmpty ? Color.red.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                )
+                .cornerRadius(12)
                 
-                TextField("", text: $phone)
-                    .foregroundColor(.black)
-                    .placeholder(when: phone.isEmpty) {
-                        Text("Ex: +229 97123456")
-                            .foregroundColor(.gray.opacity(0.6))
+                if !phoneError.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 11))
+                        Text(phoneError)
+                            .font(.caption)
                     }
+                    .foregroundColor(.red)
+                    .padding(.leading, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-            .cornerRadius(12)
             
             // Password field
-            HStack(spacing: 12) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.qOrange)
-                
-                if showPassword {
-                    TextField("", text: $password)
-                        .foregroundColor(.black)
-                        .placeholder(when: password.isEmpty) {
-                            Text("Ex: SecurePass123!")
-                                .foregroundColor(.gray.opacity(0.6))
-                        }
-                } else {
-                    SecureField("", text: $password)
-                        .foregroundColor(.black)
-                        .placeholder(when: password.isEmpty) {
-                            Text("Ex: SecurePass123!")
-                                .foregroundColor(.gray.opacity(0.6))
-                        }
-                }
-                
-                Button(action: { showPassword.toggle() }) {
-                    Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.fill")
                         .font(.system(size: 16))
-                        .foregroundColor(.gray.opacity(0.5))
+                        .foregroundColor(.qOrange)
+                    
+                    if showPassword {
+                        TextField("", text: $password)
+                            .foregroundColor(.black)
+                            .placeholder(when: password.isEmpty) {
+                                Text("Min. 6 caractères")
+                                    .foregroundColor(.gray.opacity(0.6))
+                            }
+                    } else {
+                        SecureField("", text: $password)
+                            .foregroundColor(.black)
+                            .placeholder(when: password.isEmpty) {
+                                Text("Min. 6 caractères")
+                                    .foregroundColor(.gray.opacity(0.6))
+                            }
+                    }
+                    
+                    Button(action: { showPassword.toggle() }) {
+                        Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(!passwordError.isEmpty ? Color.red.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                )
+                .cornerRadius(12)
+                
+                if !passwordError.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 11))
+                        Text(passwordError)
+                            .font(.caption)
+                    }
+                    .foregroundColor(.red)
+                    .padding(.leading, 4)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-            .cornerRadius(12)
             
             // S'inscrire button
-            Button(action: { isLoggedIn = true }) {
+            Button(action: {
+                hasAttemptedSubmit = true
+                validateFields()
+                if isFormValid {
+                    isLoggedIn = true
+                }
+            }) {
                 Text("S'inscrire")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.qOrange)
+                    .background(hasAttemptedSubmit && !isFormValid ? Color.qOrange.opacity(0.4) : Color.qOrange)
                     .cornerRadius(12)
             }
             .padding(.top, 4)
@@ -316,6 +476,8 @@ struct RegisterCard: View {
         .padding(.horizontal, 24)
         .background(Color.white)
         .cornerRadius(24, corners: [.topLeft, .topRight])
+        .animation(.easeInOut(duration: 0.2), value: phoneError)
+        .animation(.easeInOut(duration: 0.2), value: passwordError)
     }
 }
 

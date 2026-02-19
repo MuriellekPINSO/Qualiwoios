@@ -72,6 +72,9 @@ struct MainChatView: View {
     @State private var cartItems: [CartItem] = []
     @State private var selectedProduct: ProductResult?
     @State private var showProductDetail = false
+    @State private var paymentOrder: Order?
+    @State private var showPayment = false
+    @State private var paidOrderIds: Set<String> = []
     @Binding var isLoggedIn: Bool
     
     var body: some View {
@@ -196,7 +199,7 @@ struct MainChatView: View {
                         ScrollView {
                             LazyVStack(spacing: 16) {
                                 ForEach(messages) { message in
-                                    ChatBubble(message: message) { product in
+                                    ChatBubble(message: message, cartItems: cartItems, paidOrderIds: paidOrderIds) { product in
                                         // Add to cart
                                         if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
                                             cartItems[index].quantity += 1
@@ -205,11 +208,24 @@ struct MainChatView: View {
                                         }
                                         // Show cart in chat after adding product
                                         updateCartInChat()
+                                    } onRemoveFromCart: { product in
+                                        // Remove from cart (decrement)
+                                        if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
+                                            if cartItems[index].quantity > 1 {
+                                                cartItems[index].quantity -= 1
+                                            } else {
+                                                cartItems.remove(at: index)
+                                            }
+                                            updateCartInChat()
+                                        }
                                     } onProductSelect: { product in
                                         selectedProduct = product
                                         showProductDetail = true
                                     } onOrderRequest: { cartItemsToOrder in
                                         createOrderFromChat(cartItemsToOrder)
+                                    } onPayOrder: { order in
+                                        paymentOrder = order
+                                        showPayment = true
                                     } onQuantityChange: { item, newQuantity in
                                         if let index = cartItems.firstIndex(where: { $0.id == item.id }) {
                                             if newQuantity > 0 {
@@ -256,26 +272,29 @@ struct MainChatView: View {
 
                 
                 // Input bar
-                HStack(spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
                     TextField("", text: $messageInput)
                         .foregroundColor(.white)
                         .disabled(isLoading)
+                        .lineLimit(1)
                         .placeholder(when: messageInput.isEmpty) {
-                            Text("Demander au Chat")
+                            Text("De quoi avez-vous besoin aujourd'hui?")
                                 .foregroundColor(.gray.opacity(0.6))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         }
-                        .padding(.vertical, 8)
                     
                     Button(action: { sendMessage() }) {
                         if isLoading {
                             ProgressView()
                                 .scaleEffect(0.8)
                                 .tint(.white)
+                                .frame(width: 40, height: 40)
                         } else {
                             Image(systemName: "paperplane.fill")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding(10)
+                                .frame(width: 40, height: 40)
                                 .background(Color.qGradientPrimary)
                                 .clipShape(Circle())
                         }
@@ -283,7 +302,7 @@ struct MainChatView: View {
                     .disabled(isLoading)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.vertical, 8)
                 .background(Color.qSurfaceLight)
                 .cornerRadius(30)
                 .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
@@ -320,22 +339,53 @@ struct MainChatView: View {
                 }
                 .transition(.move(edge: .leading))
             }
-        }
-        .animation(.easeInOut(duration: 0.25), value: showSidebar)
-        .sheet(isPresented: $showProductDetail) {
-            if let product = selectedProduct {
+            
+            // Product Detail Overlay
+            if showProductDetail, let product = selectedProduct {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .onTapGesture { showProductDetail = false }
+                    .transition(.opacity)
+                
                 ProductDetailView(product: product) { product, quantity in
-                    // Add to cart with the specified quantity
-                    if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
-                        cartItems[index].quantity += quantity
-                    } else {
-                        cartItems.append(CartItem(product: product, quantity: quantity))
+                    if quantity > 0 {
+                        if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
+                            cartItems[index].quantity += quantity
+                        } else {
+                            cartItems.append(CartItem(product: product, quantity: quantity))
+                        }
+                        updateCartInChat()
                     }
-                    // Show cart in chat after adding product
-                    updateCartInChat()
+                    showProductDetail = false
                 }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            
+            // Payment Overlay
+            if showPayment, let order = paymentOrder {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .onTapGesture { showPayment = false }
+                    .transition(.opacity)
+                
+                PaymentSheetView(
+                    order: order,
+                    onDismiss: {
+                        showPayment = false
+                    },
+                    onPaymentComplete: {
+                        if let order = paymentOrder {
+                            paidOrderIds.insert(order.id)
+                        }
+                        showPayment = false
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: showSidebar)
+        .animation(.easeInOut(duration: 0.3), value: showProductDetail)
+        .animation(.easeInOut(duration: 0.3), value: showPayment)
     }
     
     private func sendCategoryMessage(_ category: String) {
@@ -547,9 +597,13 @@ struct MainChatView: View {
 // MARK: - Chat Bubble
 struct ChatBubble: View {
     let message: ChatMessage
+    let cartItems: [CartItem]
+    let paidOrderIds: Set<String>
     let onAddToCart: (ProductResult) -> Void
+    let onRemoveFromCart: (ProductResult) -> Void
     let onProductSelect: (ProductResult) -> Void
     let onOrderRequest: ([CartItem]) -> Void
+    let onPayOrder: (Order) -> Void
     let onQuantityChange: ((CartItem, Int) -> Void)
     let onRemoveItem: ((CartItem) -> Void)
     let onClearCart: (() -> Void)
@@ -594,7 +648,9 @@ struct ChatBubble: View {
                         
                         // Order display in chat
                         if message.messageType == .order, let order = message.order {
-                            OrderInChatAndroidView(order: order)
+                            OrderInChatAndroidView(order: order, isPaid: paidOrderIds.contains(order.id), onPayOrder: { order in
+                                onPayOrder(order)
+                            })
                         }
                         
                         // Products carousel for bot messages
@@ -604,8 +660,12 @@ struct ChatBubble: View {
                                     ForEach(products) { product in
                                         ProductCardAndroid(
                                             product: product,
+                                            cartItems: cartItems,
                                             onAddToCart: {
                                                 onAddToCart(product)
+                                            },
+                                            onRemoveFromCart: {
+                                                onRemoveFromCart(product)
                                             },
                                             onTap: {
                                                 onProductSelect(product)
