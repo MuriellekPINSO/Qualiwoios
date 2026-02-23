@@ -179,22 +179,6 @@ struct PaymentSheetView: View {
             Divider()
                 .background(Color.gray.opacity(0.2))
             
-            // Bottom: Total + Article count
-            HStack {
-                Text("Total: \(formatPrice(totalAmount)) CFA")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                Spacer()
-                
-                Text("1 ART.")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.qOrange)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            
             // Cancel button
             Button(action: onDismiss) {
                 Text("Annuler")
