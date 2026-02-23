@@ -98,150 +98,135 @@ struct OrderTrackingView: View {
                     VStack(spacing: 16) {
                         // Success Message (only show when expanded)
                         if !isCollapsed {
-                            HStack(spacing: 12) {
+                            VStack(spacing: 8) {
                                 Image("logo")
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 40, height: 40)
-                                    .shadow(color: Color.qOrange.opacity(0.5), radius: 8, x: 0, y: 0)
                                 
                                 Text("Commande créée avec succès !")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
+                                    .font(.body)
+                                    .fontWeight(.semibold)
                                     .foregroundColor(.white)
                             }
                             .padding(.vertical, 16)
-                            .padding(.horizontal, 20)
-                            .background(Color.qSurfaceLight)
-                            .cornerRadius(20)
-                            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                            .padding(.horizontal, 16)
                         }
                         
                         // Order Tracking Card
                         VStack(spacing: 0) {
                             // Collapsible Header
-                            Button(action: { withAnimation(.easeInOut(duration: 0.3)) { isCollapsed.toggle() } }) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("Suivi de Commande")
-                                            .font(.title3)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Suivi de Commande")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                    
+                                    Text("N° \(order.order_number) • AUJOURD'HUI")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 12) {
+                                    Button(action: { withAnimation(.easeInOut(duration: 0.3)) { isCollapsed.toggle() } }) {
+                                        Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.qOrange)
+                                    }
+                                    
+                                    if order.status == "cancelled" {
+                                        Text("ANNULÉ")
+                                            .font(.caption)
                                             .fontWeight(.bold)
                                             .foregroundColor(.white)
-                                        
-                                        HStack(spacing: 8) {
-                                            Text("N° \(order.order_number) • Aujourd'hui")
-                                                .font(.caption)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.gray)
-                                                .lineLimit(1)
-                                        }
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    HStack(spacing: 12) {
-                                        if order.status == "cancelled" {
-                                            Text("ANNULÉ")
-                                                .font(.caption)
-                                                .fontWeight(.bold)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 5)
-                                                .background(Color.red)
-                                                .cornerRadius(8)
-                                        }
-                                        
-                                        Image(systemName: "chevron.down")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.gray)
-                                            .rotationEffect(.degrees(isCollapsed ? 0 : 180))
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Color.red)
+                                            .cornerRadius(6)
                                     }
                                 }
-                                .padding(20)
-                                .background(Color.qSurface)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                             
                             if !isCollapsed {
                                 Divider()
-                                    .background(Color.white.opacity(0.1))
+                                    .background(Color.gray.opacity(0.3))
                                 
                                 // Status Timeline
-                                VStack(spacing: 0) {
+                                VStack(spacing: 16) {
                                     StatusStep(
                                         title: "En attente d'acceptation",
-                                        subtitle: statusIndex >= 1 ? "Votre commande est acceptée" : "Votre commande a été reçue",
-                                        isCompleted: statusIndex >= 1,
+                                        subtitle: "Confirmée",
+                                        isCompleted: statusIndex >= 0,
                                         isActive: statusIndex == 0,
-                                        icon: "clock.fill",
-                                        showLine: true
+                                        icon: "checkmark"
+                                    )
+                                    
+                                    StatusStep(
+                                        title: "En préparation",
+                                        subtitle: "Confirmée",
+                                        isCompleted: statusIndex >= 1,
+                                        isActive: statusIndex == 1,
+                                        icon: "hourglass"
                                     )
                                     
                                     StatusStep(
                                         title: "Prêt à être récupéré",
-                                        subtitle: "Passer récupérer votre sac",
+                                        subtitle: "En attente",
                                         isCompleted: statusIndex >= 2,
-                                        isActive: statusIndex == 1,
-                                        icon: "shippingbox.fill",
-                                        showLine: true
+                                        isActive: statusIndex == 2,
+                                        icon: "car"
                                     )
                                     
                                     StatusStep(
-                                        title: "Commande terminée",
-                                        subtitle: "Dernière étape",
+                                        title: "Commande complétée",
+                                        subtitle: "En attente",
                                         isCompleted: statusIndex >= 3,
-                                        isActive: statusIndex == 2,
-                                        icon: "checkmark.seal.fill",
-                                        showLine: false
+                                        isActive: statusIndex == 3,
+                                        icon: "checkmark"
                                     )
                                 }
-                                .padding(20)
-                                .background(Color.qSurface)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 16)
                                 
                                 Divider()
-                                    .background(Color.white.opacity(0.1))
+                                    .background(Color.gray.opacity(0.3))
                                 
                                 // Total and Item Count
                                 HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("TOTAL")
-                                            .font(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.gray)
-                                            .tracking(1)
-                                            
-                                        Text("\(Int(order.total)) CFA")
-                                            .font(.title3)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.qOrange)
-                                    }
+                                    Text("Total: \(Int(order.total)) CFA")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
                                     
                                     Spacer()
                                     
-                                    Text("\(itemCount) articles")
+                                    Text("\(itemCount) ART.")
                                         .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.qOrange)
+                                        .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
-                                        .background(Color.white.opacity(0.1))
-                                        .cornerRadius(20)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(6)
                                 }
-                                .padding(20)
-                                .background(Color.qSurface)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
                                 
                                 // Buttons
                                 HStack(spacing: 12) {
                                     Button(action: { showCancelAlert = true }) {
-                                        Text("Annuler la commande")
+                                        Text("Annuler")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
-                                            .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                                            .foregroundColor(.white)
                                             .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(Color(red: 0.3, green: 0.1, blue: 0.1))
-                                            .cornerRadius(12)
+                                            .padding(.vertical, 12)
+                                            .background(Color(red: 0.55, green: 0.22, blue: 0.22))
+                                            .cornerRadius(10)
                                     }
                                     .disabled(order.status == "completed" || order.status == "cancelled")
                                     .opacity(order.status == "completed" || order.status == "cancelled" ? 0.5 : 1)
@@ -250,20 +235,19 @@ struct OrderTrackingView: View {
                                         Text("Fermer")
                                             .font(.subheadline)
                                             .fontWeight(.bold)
-                                            .foregroundColor(.black)
+                                            .foregroundColor(.white)
                                             .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(Color.white)
-                                            .cornerRadius(12)
+                                            .padding(.vertical, 12)
+                                            .background(Color.qOrange)
+                                            .cornerRadius(10)
                                     }
                                 }
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 20)
-                                .background(Color.qSurface)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 16)
                             }
                         }
-                        .cornerRadius(24)
-                        .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
+                        .background(Color.qCardBg)
+                        .cornerRadius(14)
                         .padding(.horizontal, 16)
                         
                         // Items List (only show when expanded)
@@ -351,7 +335,6 @@ struct StatusStep: View {
     let isCompleted: Bool
     let isActive: Bool
     let icon: String
-    let showLine: Bool
     
     var statusColor: Color {
         if isCompleted {
@@ -364,39 +347,21 @@ struct StatusStep: View {
     }
     
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            // Icon circle and line
-            VStack(spacing: 0) {
-                ZStack {
-                    Circle()
-                        .fill(statusColor.opacity(0.2))
-                        .frame(width: 40, height: 40)
-                    
-                    if isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.green)
-                    } else if isActive {
-                        getIconImage()
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.qOrange)
-                    } else {
-                        getIconImage()
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.gray)
-                    }
-                    
-                    if isActive {
-                        Circle()
-                            .stroke(Color.qOrange, lineWidth: 2)
-                            .frame(width: 40, height: 40)
-                    }
-                }
+        HStack(spacing: 16) {
+            // Icon circle
+            ZStack {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 48, height: 48)
                 
-                if showLine {
-                    Rectangle()
-                        .fill(isCompleted ? Color.green : Color.gray.opacity(0.2))
-                        .frame(width: 2, height: 30)
+                if isCompleted {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                } else {
+                    getIconImage()
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
                 }
             }
             
@@ -404,31 +369,37 @@ struct StatusStep: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline)
-                    .fontWeight(isActive || isCompleted ? .bold : .medium)
-                    .foregroundColor(isActive || isCompleted ? .white : .gray)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
                 
                 Text(subtitle)
                     .font(.caption)
                     .foregroundColor(.gray)
-                    
-                if isActive {
-                    Text("En cours...")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.qOrange)
-                        .padding(.top, 2)
-                }
             }
-            .padding(.top, 2)
-            .padding(.bottom, showLine ? 20 : 0)
             
             Spacer()
+            
+            // Timeline connector
+            if !isActive {
+                VStack(spacing: 0) {
+                    Capsule()
+                        .fill(isCompleted ? Color.green : Color.gray.opacity(0.2))
+                        .frame(width: 2, height: 20)
+                }
+            }
         }
     }
     
     @ViewBuilder
     private func getIconImage() -> some View {
-        Image(systemName: icon)
+        switch icon {
+        case "hourglass":
+            Image(systemName: "hourglass")
+        case "car":
+            Image(systemName: "car.fill")
+        default:
+            Image(systemName: "clock.fill")
+        }
     }
 }
 

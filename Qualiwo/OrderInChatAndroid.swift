@@ -46,7 +46,7 @@ struct OrderInChatAndroidView: View {
     var statusColor: Color {
         switch currentStatus {
         case "pending": return .qOrange
-        case "preparing": return .blue
+        case "preparing": return .green
         case "ready": return .green
         case "completed": return .green
         case "cancelled": return .red
@@ -394,8 +394,11 @@ struct AndroidOrderStep: View {
                                 .font(.caption)
                                 .fontWeight(.bold)
                             
-                            Image(systemName: "hand.wave.fill")
-                                .font(.system(size: 14))
+                            Image("euro")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 16)

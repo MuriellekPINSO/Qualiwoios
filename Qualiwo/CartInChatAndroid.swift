@@ -18,7 +18,7 @@ struct CartInChatAndroidView: View {
     @State private var showDeleteConfirm = false
     @State private var showClearCartConfirm = false
     @State private var itemToDelete: CartItem?
-    @State private var isCollapsed = false
+    @State private var isCollapsed = true
     
     var total: Double {
         cartItems.reduce(0) { $0 + (Double($1.quantity) * Double($1.product.price)) }

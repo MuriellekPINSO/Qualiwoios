@@ -331,16 +331,29 @@ struct PaymentSheetView: View {
                         .foregroundColor(.white)
                 }
                 
-                Text("Paiement Réussi !")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                Text("Merci pour votre commande.\nVotre paiement a bien été reçu.")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
+                if selectedMethod == "counter" {
+                    Text("Commande Confirmée !")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("Votre commande est validée. Vous pourrez\nrégler au comptoir lors du retrait.")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                } else {
+                    Text("Paiement Réussi !")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text("Merci pour votre commande.\nVotre paiement a bien été reçu.")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                }
             }
             .padding(.bottom, 24)
             
