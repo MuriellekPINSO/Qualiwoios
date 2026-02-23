@@ -72,6 +72,9 @@ struct MainChatView: View {
     @State private var cartItems: [CartItem] = []
     @State private var selectedProduct: ProductResult?
     @State private var showProductDetail = false
+    @State private var paymentOrder: Order?
+    @State private var showPayment = false
+    @State private var paidOrderIds: Set<String> = []
     @Binding var isLoggedIn: Bool
     
     var body: some View {
@@ -96,83 +99,151 @@ struct MainChatView: View {
                     
                     Spacer()
                     
-                    HStack(spacing: 12) {
-                        Button(action: { 
-                            // Scroll to cart in chat or show it
-                            if !cartItems.isEmpty {
-                                updateCartInChat()
-                            }
-                        }) {
-                            ZStack(alignment: .topTrailing) {
-                                Image(systemName: "bag.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                                
-                                if !cartItems.isEmpty {
-                                    Text("\(cartItems.count)")
-                                        .font(.caption2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                        .frame(width: 20, height: 20)
-                                        .background(Color.red)
-                                        .clipShape(Circle())
-                                        .offset(x: 8, y: -8)
-                                }
-                            }
-                        }
-                        
-                        Circle()
-                            .fill(Color.qOrange)
-                            .frame(width: 36, height: 36)
-                            .overlay(
-                                Text("U")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                    }
+                    Circle()
+                        .fill(Color.qOrange)
+                        .frame(width: 36, height: 36)
+                        .overlay(
+                            Text("U")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.white)
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
                 // Content area
                 if messages.isEmpty {
-                    // Welcome state
-                    Spacer()
-                    
-                    VStack(spacing: 16) {
-                        Image("logo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 70, height: 70)
-                            .foregroundColor(.qOrange)
-                        
-                        Text("Comment puis-je vous aider?")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
+                    // Welcome state (Android style)
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            Spacer().frame(height: 40)
+                            
+                            // Logo + Welcome text
+                            VStack(spacing: 12) {
+                                Image("logo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                
+                                Text("Bienvenue sur Qualiwo")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                            }
+                            
+                            // Categories card
+                            VStack(alignment: .leading, spacing: 0) {
+                                // Header
+                                HStack(spacing: 10) {
+                                    Image(systemName: "gift.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.qOrange)
+                                    
+                                    Text("CE QUE VOUS POUVEZ ACHETER")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.qOrange)
+                                        .tracking(0.5)
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 18)
+                                .padding(.bottom, 14)
+                                
+                                Divider().background(Color.gray.opacity(0.15)).padding(.horizontal, 16)
+                                
+                                // Alimentation générale
+                                Button(action: { sendCategoryMessage("Alimentaire") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "cart.fill",
+                                        title: "Alimentation générale",
+                                        subtitle: "Chocolats · Mayonnaise · Riz"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                
+                                Divider().background(Color.gray.opacity(0.15)).padding(.horizontal, 16)
+                                
+                                // Boissons
+                                Button(action: { sendCategoryMessage("Boissons") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "cup.and.saucer.fill",
+                                        title: "Boissons",
+                                        subtitle: "Jus de fruits · Sodas · Vins"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                
+                                Divider().background(Color.gray.opacity(0.15)).padding(.horizontal, 16)
+                                
+                                // Maison & Cuisine
+                                Button(action: { sendCategoryMessage("Maison & Cuisine") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "house.fill",
+                                        title: "Maison & Cuisine",
+                                        subtitle: "Ustensiles · Arts de la table · Décoration"
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                                
+                                Divider().background(Color.gray.opacity(0.15)).padding(.horizontal, 16)
+                                
+                                // Hygiène & Beauté
+                                Button(action: { sendCategoryMessage("Hygiène & Beauté") }) {
+                                    WelcomeCategoryRow(
+                                        icon: "flower",
+                                        title: "Hygiène & Beauté",
+                                        subtitle: "Parfums · Maquillage · Soins",
+                                        isAssetIcon: true
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 14)
+                            }
+                            .background(Color.qCardBg)
+                            .cornerRadius(16)
+                            .padding(.horizontal, 16)
+                            
+                            Spacer().frame(height: 20)
+                        }
                     }
-                    
-                    Spacer()
                 } else {
                     // Messages list
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 16) {
                                 ForEach(messages) { message in
-                                    ChatBubble(message: message) { product in
+                                    ChatBubble(message: message, cartItems: cartItems, paidOrderIds: paidOrderIds) { product in
                                         // Add to cart
                                         if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
                                             cartItems[index].quantity += 1
                                         } else {
                                             cartItems.append(CartItem(product: product, quantity: 1))
                                         }
-                                        // Show cart in chat after adding product
                                         updateCartInChat()
+                                    } onRemoveFromCart: { product in
+                                        if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
+                                            if cartItems[index].quantity > 1 {
+                                                cartItems[index].quantity -= 1
+                                            } else {
+                                                cartItems.remove(at: index)
+                                            }
+                                            updateCartInChat()
+                                        }
                                     } onProductSelect: { product in
                                         selectedProduct = product
                                         showProductDetail = true
                                     } onOrderRequest: { cartItemsToOrder in
                                         createOrderFromChat(cartItemsToOrder)
+                                    } onPayOrder: { order in
+                                        paymentOrder = order
+                                        showPayment = true
                                     } onQuantityChange: { item, newQuantity in
                                         if let index = cartItems.firstIndex(where: { $0.id == item.id }) {
                                             if newQuantity > 0 {
@@ -191,6 +262,14 @@ struct MainChatView: View {
                                     }
                                     .id(message.id)
                                 }
+                                
+                                // Loading indicator
+                                if isLoading {
+                                    LoadingIndicatorView()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 8)
+                                        .id("loading")
+                                }
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
@@ -206,31 +285,40 @@ struct MainChatView: View {
                 }
                 
                 // Input bar
-                HStack(spacing: 10) {
-                    TextField("", text: $messageInput)
+                HStack(alignment: .center, spacing: 10) {
+                    TextField("", text: $messageInput, axis: .vertical)
                         .foregroundColor(.white)
                         .disabled(isLoading)
+                        .lineLimit(1...5)
                         .placeholder(when: messageInput.isEmpty) {
-                            Text("Demander au Chat")
+                            Text("De quoi avez-vous besoin aujourd'hui?")
                                 .foregroundColor(.gray.opacity(0.6))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         }
                     
                     Button(action: { sendMessage() }) {
                         if isLoading {
                             ProgressView()
                                 .scaleEffect(0.8)
+                                .tint(.white)
+                                .frame(width: 36, height: 36)
                         } else {
                             Image(systemName: "paperplane.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(messageInput.isEmpty ? .gray.opacity(0.4) : .qOrange)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 36, height: 36)
+                                .background(Color.qOrange)
+                                .clipShape(Circle())
                         }
                     }
                     .disabled(isLoading)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.qInputBg)
-                .cornerRadius(28)
+                .padding(.leading, 18)
+                .padding(.trailing, 10)
+                .padding(.vertical, 10)
+                .background(Color.qCardBg)
+                .cornerRadius(30)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 16)
             }
@@ -264,22 +352,61 @@ struct MainChatView: View {
                 }
                 .transition(.move(edge: .leading))
             }
-        }
-        .animation(.easeInOut(duration: 0.25), value: showSidebar)
-        .sheet(isPresented: $showProductDetail) {
-            if let product = selectedProduct {
+            
+            // Product Detail Overlay
+            if showProductDetail, let product = selectedProduct {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .onTapGesture { showProductDetail = false }
+                    .transition(.opacity)
+                
                 ProductDetailView(product: product) { product, quantity in
-                    // Add to cart with the specified quantity
-                    if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
-                        cartItems[index].quantity += quantity
-                    } else {
-                        cartItems.append(CartItem(product: product, quantity: quantity))
+                    if quantity > 0 {
+                        if let index = cartItems.firstIndex(where: { $0.product.id == product.id }) {
+                            cartItems[index].quantity += quantity
+                        } else {
+                            cartItems.append(CartItem(product: product, quantity: quantity))
+                        }
+                        updateCartInChat()
                     }
-                    // Show cart in chat after adding product
-                    updateCartInChat()
+                    showProductDetail = false
                 }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            
+            // Payment Overlay
+            if showPayment, let order = paymentOrder {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .onTapGesture { showPayment = false }
+                    .transition(.opacity)
+                
+                PaymentSheetView(
+                    order: order,
+                    onDismiss: {
+                        showPayment = false
+                    },
+                    onPaymentComplete: {
+                        if let order = paymentOrder {
+                            paidOrderIds.insert(order.id)
+                        }
+                        showPayment = false
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: showSidebar)
+        .animation(.easeInOut(duration: 0.3), value: showProductDetail)
+        .animation(.easeInOut(duration: 0.3), value: showPayment)
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+    }
+    
+    private func sendCategoryMessage(_ category: String) {
+        messageInput = category
+        sendMessage()
     }
     
     private func sendMessage() {
@@ -486,14 +613,18 @@ struct MainChatView: View {
 // MARK: - Chat Bubble
 struct ChatBubble: View {
     let message: ChatMessage
+    let cartItems: [CartItem]
+    let paidOrderIds: Set<String>
     let onAddToCart: (ProductResult) -> Void
+    let onRemoveFromCart: (ProductResult) -> Void
     let onProductSelect: (ProductResult) -> Void
     let onOrderRequest: ([CartItem]) -> Void
+    let onPayOrder: (Order) -> Void
     let onQuantityChange: ((CartItem, Int) -> Void)
     let onRemoveItem: ((CartItem) -> Void)
     let onClearCart: (() -> Void)
     
-    @State private var isCartExpanded = true
+    @State private var isCartExpanded = false
     
     var body: some View {
         VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 12) {
@@ -519,7 +650,7 @@ struct ChatBubble: View {
                         
                         // Cart display in chat
                         if message.messageType == .cart, let messageCartItems = message.cartItems {
-                            CartInChatView(
+                            CartInChatAndroidView(
                                 cartItems: messageCartItems,
                                 onOrderRequest: {
                                     onOrderRequest(messageCartItems)
@@ -532,7 +663,13 @@ struct ChatBubble: View {
                         
                         // Order display in chat
                         if message.messageType == .order, let order = message.order {
-                            OrderInChatView(order: order)
+                            OrderInChatAndroidView(
+                                order: order,
+                                isPaid: paidOrderIds.contains(order.id),
+                                onPayOrder: { order in
+                                    onPayOrder(order)
+                                }
+                            )
                         }
                         
                         // Products carousel for bot messages
@@ -540,10 +677,14 @@ struct ChatBubble: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
                                     ForEach(products) { product in
-                                        ProductCard(
+                                        ProductCardAndroid(
                                             product: product,
+                                            cartItems: cartItems,
                                             onAddToCart: {
                                                 onAddToCart(product)
+                                            },
+                                            onRemoveFromCart: {
+                                                onRemoveFromCart(product)
                                             },
                                             onTap: {
                                                 onProductSelect(product)
@@ -553,7 +694,7 @@ struct ChatBubble: View {
                                 }
                                 .padding(.horizontal, 16)
                             }
-                            .frame(height: 300)
+                            .frame(height: 320)
                         }
                     }
                     

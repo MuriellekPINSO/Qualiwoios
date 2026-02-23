@@ -48,6 +48,7 @@ struct LoadingIndicatorView: View {
             Text(steps[currentStep] + dots)
                 .font(.subheadline)
                 .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .animation(.none, value: dotCount)
         }
         .padding(.vertical, 8)
