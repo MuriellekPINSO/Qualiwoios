@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import SafariServices
+import WebKit
 
 // MARK: - Payment Step
 enum PaymentStep: Equatable {
@@ -364,6 +366,22 @@ struct PaymentSheetView: View {
     }
 }
 
+// MARK: - FedaPay Payment Response
+struct PaymentCreateResponse: Codable {
+    let payment_token: String
+    let transaction_id: Int
+    let checkout_url: String
+}
+
+struct PaymentStatusResponse: Codable {
+    let id: Int
+    let status: String
+    let amount: Int?
+    let mode: String?
+    let reference: String?
+    let customer: String?
+}
+
 // MARK: - Mobile Money Form Fields (inside the card)
 struct MobileMoneyFormFields: View {
     let totalAmount: Int
@@ -376,6 +394,11 @@ struct MobileMoneyFormFields: View {
     @State private var phoneNumber: String = ""
     @State private var isProcessing: Bool = false
     @State private var hasAttempted: Bool = false
+    @State private var errorMessage: String? = nil
+    @State private var transactionId: Int? = nil
+    @State private var isWaitingForPayment: Bool = false
+    @State private var showSafari: Bool = false
+    @State private var checkoutURL: URL? = nil
     
     private var isPhoneValid: Bool {
         let digits = phoneNumber.replacingOccurrences(of: " ", with: "")
@@ -388,6 +411,21 @@ struct MobileMoneyFormFields: View {
     
     private var isFormValid: Bool {
         return isPhoneValid && isNameValid
+    }
+    
+    /// Split "Jean Dupont" into ("Jean", "Dupont")
+    private var nameParts: (firstname: String, lastname: String) {
+        let parts = fullName.trimmingCharacters(in: .whitespaces).split(separator: " ", maxSplits: 1).map(String.init)
+        let first = parts.first ?? fullName
+        let last = parts.count > 1 ? parts[1] : ""
+        return (first, last)
+    }
+    
+    /// Format phone to international +229 format
+    private var formattedPhone: String {
+        let digits = phoneNumber.replacingOccurrences(of: " ", with: "")
+        if digits.hasPrefix("+") { return digits }
+        return "+229\(digits)"
     }
     
     var body: some View {
@@ -454,6 +492,31 @@ struct MobileMoneyFormFields: View {
                         .transition(.opacity)
                 }
             }
+            
+            // Error message
+            if let error = errorMessage {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12))
+                    Text(error)
+                        .font(.caption)
+                }
+                .foregroundColor(.red)
+                .padding(.horizontal, 4)
+            }
+            
+            // Waiting for payment message
+            if isWaitingForPayment {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.qOrange)
+                        .scaleEffect(0.7)
+                    Text("En attente de confirmation du paiement…")
+                        .font(.caption)
+                        .foregroundColor(.qOrange)
+                }
+                .padding(.horizontal, 4)
+            }
         }
         .padding(.horizontal, 20)
         
@@ -462,8 +525,9 @@ struct MobileMoneyFormFields: View {
         // Confirm button
         Button(action: {
             hasAttempted = true
+            errorMessage = nil
             if isFormValid {
-                processPayment()
+                initiatePayment()
             }
         }) {
             HStack(spacing: 10) {
@@ -471,6 +535,15 @@ struct MobileMoneyFormFields: View {
                     ProgressView()
                         .tint(.white)
                         .scaleEffect(0.8)
+                    Text("Traitement en cours…")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                } else if isWaitingForPayment {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16))
+                    Text("Vérifier le paiement")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
                 } else {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 16))
@@ -492,13 +565,182 @@ struct MobileMoneyFormFields: View {
         .disabled(isProcessing)
         .padding(.horizontal, 20)
         .padding(.bottom, 20)
+        .sheet(isPresented: $showSafari, onDismiss: {
+            // When user closes the in-app browser, check payment status
+            if isWaitingForPayment, let txnId = transactionId {
+                checkPaymentStatus(transactionId: txnId)
+            }
+        }) {
+            if let url = checkoutURL {
+                PaymentWebView(
+                    url: url,
+                    callbackURL: "qualiwo-api-fastapi.vercel.app/payments/callback"
+                )
+                .ignoresSafeArea()
+            }
+        }
     }
     
-    private func processPayment() {
+    // MARK: - Initiate FedaPay Payment
+    private func initiatePayment() {
+        // If already waiting, just check status
+        if isWaitingForPayment, let txnId = transactionId {
+            checkPaymentStatus(transactionId: txnId)
+            return
+        }
+        
         isProcessing = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isProcessing = false
-            onSuccess()
+        errorMessage = nil
+        
+        let names = nameParts
+        let requestBody: [String: Any] = [
+            "order_id": orderId,
+            "phone_number": formattedPhone,
+            "firstname": names.firstname,
+            "lastname": names.lastname,
+            "callback_url": "https://qualiwo-api-fastapi.vercel.app/payments/callback",
+            "amount": totalAmount
+        ]
+        
+        Task {
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
+                
+                let url = URL(string: "https://qualiwo-api-fastapi.vercel.app/payments/create")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = jsonData
+                
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw URLError(.badServerResponse)
+                }
+                
+                if httpResponse.statusCode == 201 || httpResponse.statusCode == 200 {
+                    let paymentResponse = try JSONDecoder().decode(PaymentCreateResponse.self, from: data)
+                    
+                    DispatchQueue.main.async {
+                        transactionId = paymentResponse.transaction_id
+                        isProcessing = false
+                        isWaitingForPayment = true
+                        
+                        // Open FedaPay checkout in-app browser
+                        if let url = URL(string: paymentResponse.checkout_url) {
+                            checkoutURL = url
+                            showSafari = true
+                        }
+                    }
+                } else {
+                    // Parse error from server
+                    let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                    let message = errorResponse?["detail"] as? String
+                        ?? errorResponse?["message"] as? String
+                        ?? "Erreur lors de l'initialisation du paiement"
+                    
+                    DispatchQueue.main.async {
+                        errorMessage = message
+                        isProcessing = false
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    errorMessage = "Erreur réseau: \(error.localizedDescription)"
+                    isProcessing = false
+                }
+            }
+        }
+    }
+    
+    // MARK: - Check Payment Status
+    private func checkPaymentStatus(transactionId: Int) {
+        isProcessing = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                let url = URL(string: "https://qualiwo-api-fastapi.vercel.app/payments/status/\(transactionId)")!
+                let (data, response) = try await URLSession.shared.data(from: url)
+                
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    throw URLError(.badServerResponse)
+                }
+                
+                let statusResponse = try JSONDecoder().decode(PaymentStatusResponse.self, from: data)
+                
+                DispatchQueue.main.async {
+                    isProcessing = false
+                    
+                    switch statusResponse.status {
+                    case "approved":
+                        isWaitingForPayment = false
+                        onSuccess()
+                        
+                    case "pending":
+                        errorMessage = "Le paiement est en attente de confirmation. Veuillez patienter ou réessayer."
+                        
+                    case "canceled", "cancelled":
+                        isWaitingForPayment = false
+                        errorMessage = "Le paiement a été annulé."
+                        self.transactionId = nil
+                        
+                    case "declined":
+                        isWaitingForPayment = false
+                        errorMessage = "Le paiement a été refusé. Veuillez réessayer."
+                        self.transactionId = nil
+                        
+                    default:
+                        errorMessage = "Statut du paiement: \(statusResponse.status)"
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    isProcessing = false
+                    errorMessage = "Impossible de vérifier le paiement. Réessayez."
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Payment WebView (auto-closes on callback redirect)
+struct PaymentWebView: UIViewRepresentable {
+    let url: URL
+    let callbackURL: String
+    @Environment(\.dismiss) var dismiss
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        let parent: PaymentWebView
+        
+        init(_ parent: PaymentWebView) {
+            self.parent = parent
+        }
+        
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if let url = navigationAction.request.url?.absoluteString,
+               url.contains(parent.callbackURL) {
+                // FedaPay redirected to callback → payment done, close webview
+                decisionHandler(.cancel)
+                DispatchQueue.main.async {
+                    self.parent.dismiss()
+                }
+                return
+            }
+            decisionHandler(.allow)
         }
     }
 }

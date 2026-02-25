@@ -38,6 +38,7 @@ struct OrderInChatAndroidView: View {
         case "preparing": return "EN PRÉPARATION"
         case "ready": return "PRÊT"
         case "completed": return "TERMINÉ"
+        case "paid": return "PAYÉ"
         case "cancelled": return "ANNULÉ"
         default: return currentStatus.uppercased()
         }
@@ -49,6 +50,7 @@ struct OrderInChatAndroidView: View {
         case "preparing": return .green
         case "ready": return .green
         case "completed": return .green
+        case "paid": return .green
         case "cancelled": return .red
         default: return .gray
         }
